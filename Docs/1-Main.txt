@@ -1,0 +1,7 @@
+
+------------------------------------------------------------------
+TFileHolder frees the model when it is destroyed. 
+But sometimes exception accures.
+To think how this impacts the software and what we can do!
+Possible solution is to try catch and log the error!
+------------------------------------------------------------------
