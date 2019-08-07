@@ -3,7 +3,7 @@ unit FileManagerResource;
 interface
 
 uses
-  uTranslate;
+  Classes;
 
 resourcestring
 
@@ -17,15 +17,16 @@ resourcestring
   cErrDiskSpace = 'Cannot write to disk! Disk is full!';
   cFileExists = 'File with name ''%s'' already exists! Do you want to override it?';
 
-  procedure addToTranslator();
+  function getResources(): TStringList;
 
 implementation
 
-procedure addToTranslator();
+function getResources(): TStringList;
 begin
-  gTranslate.addToResourceList(Pointer(@FileManagerResource.cAskSave), 'FileManagerResource.cAskSave');
-  gTranslate.addToResourceList(Pointer(@FileManagerResource.cErrDiskWrite), 'FileManagerResource.cErrDiskWrite');
-  gTranslate.addToResourceList(Pointer(@FileManagerResource.cFileExists), 'FileManagerResource.cFileExists');
+  Result := TStringList.Create();
+  Result.AddObject('FileManagerResource.cAskSave', Pointer(@FileManagerResource.cAskSave));
+  Result.AddObject('FileManagerResource.cErrDiskWrite', Pointer(@FileManagerResource.cErrDiskWrite));
+  Result.AddObject('FileManagerResource.cFileExists', Pointer(@FileManagerResource.cFileExists));
 end;
 
 end.

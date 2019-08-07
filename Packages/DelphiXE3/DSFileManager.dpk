@@ -32,7 +32,6 @@ package DSFileManager;
 requires
   rtl,
   vcl,
-  DSMenus,
   DsCore;
 
 contains

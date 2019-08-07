@@ -107,7 +107,6 @@
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
-        <DCCReference Include="DSMenus.dcp"/>
         <DCCReference Include="DsCore.dcp"/>
         <DCCReference Include="..\..\Source\CustomFiles.pas"/>
         <DCCReference Include="..\..\Source\DSFileManager.pas"/>
