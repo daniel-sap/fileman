@@ -968,8 +968,15 @@ begin
   try
     if (aFileHolder.isNew) then
       FileStream := TFileStream.Create(aFileHolder.FileName, fmCreate)
-    else
-      FileStream := TFileStream.Create(aFileHolder.FileName, fmOpenReadWrite);
+    else begin
+      // If file is removed then create new file
+      if FileExists(aFileHolder.FileName) then begin
+        FileStream := TFileStream.Create(aFileHolder.FileName, fmOpenReadWrite);
+      end
+      else begin
+        FileStream := TFileStream.Create(aFileHolder.FileName, fmCreate)
+      end;
+    end;
   except on E: Exception do begin
     MessageDlg(cErrDiskWrite, mtError, [mbOk], 0);
     Result := False;
