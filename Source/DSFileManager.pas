@@ -1,4 +1,4 @@
-unit DSFileManager;
+﻿unit DSFileManager;
 
 interface
 
@@ -785,7 +785,6 @@ begin
   end;
 end;
 
-// ������� �������� ���������� ������� �� ini �����
 procedure TDSFileManager.LoadRecentFromIni(aOnlyExisting: Boolean);
 var
   recentReader: TRecentReader;
