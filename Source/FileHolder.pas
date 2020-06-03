@@ -17,6 +17,7 @@ type
     fIsNew: boolean;
     fFileName: string;
     fModified: Boolean;
+    fModifiedAfterBackup: Boolean;
     fModel: TObject;
     fId: Integer;
     procedure setModified(const Value: Boolean);
@@ -32,6 +33,7 @@ type
 
     // True if the model differs from the saved on hard disk
     property Modified: Boolean read fModified write setModified;
+    property ModifiedAfterBackup: Boolean read fModifiedAfterBackup write fModifiedAfterBackup;
 
     // The model that contains the data
     property Model: TObject read fModel write fModel;
@@ -45,6 +47,7 @@ begin
   inherited;
   fIsNew := True;
   fModified := False;
+  fModifiedAfterBackup := False;
 end;
 
 destructor TFileHolder.Destroy;
@@ -71,6 +74,10 @@ end;
 
 procedure TFileHolder.setModified(const Value: Boolean);
 begin
+  if Value then begin
+    fModifiedAfterBackup := True;
+  end;
+
   if (Value <> fModified) then begin
     fModified := Value;
     notifyAll(PROPERTY_MODIFIED, nil, nil);

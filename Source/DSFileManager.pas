@@ -33,9 +33,10 @@ type
     fMenuReopen: TMenuItem;
     fMenuOpened: TMenuItem;
 
-    fAutoSave: Boolean;
-    fAutoSaveInterval: Integer;
-    fAutoSaveTimer: TTimer;
+    fBackupEnabled: Boolean;
+    fBackupInterval: Integer;
+    fBackupFolder: String;
+    fBackupTimer: TTimer;
 
     fOpenIndex: Integer;
 
@@ -73,8 +74,8 @@ type
     procedure MenuReopenClick(Sender: TObject);
     procedure doBeforeFileChange;
     procedure doFileChanged;
-    procedure setAutoSave(const Value: Boolean);
-    procedure setAutoSaveInterval(const Value: Integer);
+    procedure setBackupEnabled(const Value: Boolean);
+    procedure setBackupInterval(const Value: Integer);
     function getKindForFile(aModel: TObject): TMdCustomFiles;
     procedure doModifiedChanged();
   public
@@ -118,8 +119,8 @@ type
     procedure LoadRecentFromIni(aOnlyExisting: Boolean);
     procedure OpenedMenuUpdateChecked;
 
-    procedure AutoSaveOnTimer(Sender: TObject);
-    procedure AutoSaveFile(aFile: TFileHolder; aFileName: string);
+    procedure BackupOnTimer(Sender: TObject);
+    procedure saveBackupFile(aFile: TFileHolder);
 
     procedure registerReader(aReader: TSaveLoader);
     procedure registerWriter(aWriter: TSaveLoader);
@@ -130,8 +131,6 @@ type
     property FileCount: Integer read getFileCount;
     property ActiveFile: TFileHolder read getActiveFile write setActiveFile;
     property ActiveModel: TObject read getActiveModel;
-    property AutoSave: Boolean read fAutoSave write SetAutoSave;
-    property AutoSaveInterval: Integer read fAutoSaveInterval write setAutoSaveInterval;
   published
     property isOpened: Boolean read getIsOpened;
     property isModified: Boolean read getIsModified;
@@ -141,6 +140,9 @@ type
     property Recent: TStrings read fRecent;
     property MenuReopen: TMenuItem read fMenuReopen write SetMenuReopen;
     property MenuOpened: TMenuItem read fMenuOpened write SetMenuOpened;
+    property BackupEnabled: Boolean read fBackupEnabled write fBackupEnabled;
+    property BackupInterval: Integer read fBackupInterval write setBackupInterval;
+    property BackupFolder: String read fBackupFolder write fBackupFolder;
 
     property onNewFile: TNotifyEvent read fOnNewFile write fOnNewFile;
     property onOpenFile: TNotifyEvent read fOnOpenFile write fOnOpenFile;
@@ -178,12 +180,12 @@ begin
   fOpenIndex := 0;
   fMaxRecent := 10;
   fRecent := TStringList.Create;
-  fAutoSave := True;
-  fAutoSaveInterval := 5 * 60 * 1000; // 5 minutes
-  fAutoSaveTimer := TTimer.Create(Self);
-  fAutoSaveTimer.Interval := fAutoSaveInterval;
-  fAutoSaveTimer.OnTimer := AutoSaveOnTimer;
-  fAutoSaveTimer.Enabled := True;
+  fBackupEnabled := True;
+  fBackupInterval := 5 * 60 * 1000; // 5 minutes
+  fBackupTimer := TTimer.Create(Self);
+  fBackupTimer.Interval := fBackupInterval;
+  fBackupTimer.OnTimer := BackupOnTimer;
+  fBackupTimer.Enabled := True;
 end;
 
 destructor TDSFileManager.Destroy;
@@ -844,23 +846,22 @@ begin
   gSaveLoaderMgr.registerWriter(aWriter);
 end;
 
-procedure TDSFileManager.setAutoSave(const Value: Boolean);
+procedure TDSFileManager.setBackupEnabled(const Value: Boolean);
 begin
-  fAutoSave := Value;
-  fAutoSaveTimer.Enabled := Value;
+  fBackupEnabled := Value;
+  fBackupTimer.Enabled := Value;
 end;
 
-procedure TDSFileManager.setAutoSaveInterval(const Value: Integer);
+procedure TDSFileManager.setBackupInterval(const Value: Integer);
 begin
-  fAutoSaveInterval := Value;
-  fAutoSaveTimer.Interval := Value;
+  fBackupInterval := Value;
+  fBackupTimer.Interval := Value;
 end;
 
-procedure TDSFileManager.AutoSaveOnTimer(Sender: TObject);
+procedure TDSFileManager.BackupOnTimer(Sender: TObject);
 var
   i: Integer;
   vIsNew: Boolean;
-  vFileName, vFileExt: string;
 begin
   Application.MainForm.Enabled := False;
   try
@@ -873,12 +874,7 @@ begin
       end
       else
       begin
-        vFileName := TFileHolder(fOpenedFiles[i]).FileName;
-        vFileExt := ExtractFileExt(vFileName);
-        if vFileExt[1] = '.' then
-          Delete(vFileExt, 1, 1);
-        vFileName := ChangeFileExt(vFileName, '.~' + vFileExt);
-        AutoSaveFile(TFileHolder(fOpenedFiles[i]), vFileName);
+        saveBackupFile(TFileHolder(fOpenedFiles[i]));
       end;
     end;
   finally
@@ -886,12 +882,47 @@ begin
   end;
 end;
 
-procedure TDSFileManager.AutoSaveFile(aFile: TFileHolder; aFileName: string);
+procedure TDSFileManager.saveBackupFile(aFile: TFileHolder);
 var
   FileStream: TFileStream;
+  vFilePath, vFileName, vFileExt: string;
+  i: Integer;
+  vFound: Boolean;
 begin
+  if not aFile.ModifiedAfterBackup then
+    Exit;
+  aFile.ModifiedAfterBackup := False;
+
+  vFilePath := ExtractFilePath(aFile.FileName);
+  if vFilePath[Length(vFilePath)] <> PathDelim then
+    vFilePath := vFilePath + PathDelim;
+  vFilePath := vFilePath + BackupFolder;
+  if vFilePath[Length(vFilePath)] <> PathDelim then
+    vFilePath := vFilePath + PathDelim;
+
+  if not DirectoryExists(vFileName) then
+    CreateDir(vFilePath);
+
+  vFileName := ExtractFileName(aFile.FileName);
+//  vFileExt := ExtractFileExt(vFileName);
+//  if vFileExt[1] = '.' then
+//    Delete(vFileExt, 1, 1);
+
+  vFound := False;
+  vFileName := vFilePath + vFileName;// + '.~1~';
+  for i := 1 to 10000 do begin
+    if not FileExists(vFileName + '.~' + IntToStr(i) + '~')  then begin
+      vFileName := vFileName + '.~' + IntToStr(i) + '~';
+      vFound := True;
+      Break;
+    end;
+  end;
+
+  if not vFound then
+    vFileName := vFilePath + vFileName + '.~1~';
+
   try
-    FileStream := TFileStream.Create(aFileName, fmCreate or fmShareDenyWrite);
+    FileStream := TFileStream.Create(vFileName, fmCreate or fmShareDenyWrite);
   except
     Exit;
   end;
